@@ -1,3 +1,5 @@
+#![allow(clippy::result_unit_err)]
+#![allow(clippy::type_complexity)]
 pub mod parse;
 use parse::*;
 
@@ -82,9 +84,9 @@ pub fn read_log<R: std::io::Read>(input: R, mode: ReadMode, request_ids: Vec<u32
 mod test {
     use super::*;
 
-    const SOURCE1: &'static str = r#"System::Error NetworkError "url unknown" requestid=1"#;
+    const SOURCE1: &str = r#"System::Error NetworkError "url unknown" requestid=1"#;
 
-    const SOURCE: &'static str = r#"
+    const SOURCE: &str = r#"
 System::Error NetworkError  "network interface is down " requestid=1
 App::Error SystemError  "network " requestid=1
 System::Trace SendRequest  "CreateUser{ "user_id ": 10,  "authrized_capital ": 1000,} " requestid=2
