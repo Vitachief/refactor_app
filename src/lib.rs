@@ -23,11 +23,13 @@ struct LogIterator<R: std::io::BufRead> {
 impl<R: std::io::BufRead> LogIterator<R> {
     fn new(reader: R) -> Self {
         Self {
-            lines: reader.lines().filter(
-                |line_res| !line_res.as_ref().ok()
+            lines: reader.lines().filter(|line_res| {
+                !line_res
+                    .as_ref()
+                    .ok()
                     .map(|line| line.trim().is_empty())
                     .unwrap_or(false)
-            ),
+            }),
         }
     }
 }
@@ -38,9 +40,7 @@ impl<R: std::io::BufRead> Iterator for LogIterator<R> {
         let line = self.lines.next()?.ok()?;
         let trimmed = line.trim();
         match <parse::LogLine as parse::Parsable>::parser().parse(trimmed) {
-            Ok((remaining, result)) => {
-                remaining.trim().is_empty().then_some(result)
-            }
+            Ok((remaining, result)) => remaining.trim().is_empty().then_some(result),
             Err(()) => {
                 eprintln!("DEBUG: Parse failed");
                 None
@@ -50,14 +50,17 @@ impl<R: std::io::BufRead> Iterator for LogIterator<R> {
 }
 
 /// Принимает поток байт, отдаёт отфильтрованные и распарсенные логи
-pub fn read_log<R: std::io::Read>(input: R, mode: ReadMode, request_ids: Vec<u32>) -> Result<Vec<LogLine>, ()> {
+pub fn read_log<R: std::io::Read>(
+    input: R,
+    mode: ReadMode,
+    request_ids: Vec<u32>,
+) -> Result<Vec<LogLine>, ()> {
     let reader = std::io::BufReader::with_capacity(4096, input);
     let logs = LogIterator::new(reader);
-    
-    let collected = logs.filter(|log| {
-        request_ids.is_empty() || request_ids.contains(&log.request_id.get())
-    }).filter(|log| {
-        match mode {
+
+    let collected = logs
+        .filter(|log| request_ids.is_empty() || request_ids.contains(&log.request_id.get()))
+        .filter(|log| match mode {
             ReadMode::All => true,
             ReadMode::Errors => matches!(
                 &log.kind,
@@ -67,16 +70,16 @@ pub fn read_log<R: std::io::Read>(input: R, mode: ReadMode, request_ids: Vec<u32
                 &log.kind,
                 LogKind::App(AppLogKind::Journal(
                     AppLogJournalKind::BuyAsset(_)
-                    | AppLogJournalKind::SellAsset(_)
-                    | AppLogJournalKind::CreateUser{..}
-                    | AppLogJournalKind::RegisterAsset{..}
-                    | AppLogJournalKind::DepositCash(_)
-                    | AppLogJournalKind::WithdrawCash(_)
+                        | AppLogJournalKind::SellAsset(_)
+                        | AppLogJournalKind::CreateUser { .. }
+                        | AppLogJournalKind::RegisterAsset { .. }
+                        | AppLogJournalKind::DepositCash(_)
+                        | AppLogJournalKind::WithdrawCash(_)
                 ))
             ),
-        }
-    }).collect();
-    
+        })
+        .collect();
+
     Ok(collected)
 }
 
@@ -147,11 +150,13 @@ App::Journal BuyAsset UserBacket{ "user_id ": "Alice ", "backet ":Backet{ "asset
     fn test_all() {
         let all_parsed = read_log(SOURCE1.as_bytes(), ReadMode::All, vec![]).unwrap();
         assert_eq!(all_parsed.len(), 1);
-        
+
         let all_parsed = read_log(SOURCE.as_bytes(), ReadMode::All, vec![]).unwrap();
         println!("all parsed:");
-        all_parsed.iter().for_each(|parsed| println!("  {:?}", parsed));
-        
-        assert_eq!(all_parsed.len(), SOURCE.lines().count()-2);
+        all_parsed
+            .iter()
+            .for_each(|parsed| println!("  {:?}", parsed));
+
+        assert_eq!(all_parsed.len(), SOURCE.lines().count() - 2);
     }
 }
